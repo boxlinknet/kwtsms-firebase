@@ -1,0 +1,42 @@
+# Dependencies
+node_modules/
+functions/node_modules/
+
+# Build
+functions/lib/
+*.js.map
+
+# Environment
+.env
+.env.*
+
+# Firebase
+.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+pubsub-debug.log
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Claude/AI
+.claude/
+CLAUDE.md
+.superpowers/
+.worktrees/
+
+# Docs and tests (local only)
+docs/
+tests/
+test/
+.playwright*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
