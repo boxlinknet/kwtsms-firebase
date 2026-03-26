@@ -52,12 +52,11 @@ export const handleOtp = functions.https.onCall(async (data: OtpRequest, context
     return handleSendOtp(phone, context.auth.uid);
   }
 
-  if (data.action === 'verifyOtp') {
-    if (!data.code) {
-      throw new functions.https.HttpsError('invalid-argument', 'Field "code" is required.');
-    }
-    return handleVerifyOtp(phone, data.code, context.auth.uid);
+  // data.action === 'verifyOtp' (guaranteed by validation above)
+  if (!data.code) {
+    throw new functions.https.HttpsError('invalid-argument', 'Field "code" is required.');
   }
+  return handleVerifyOtp(phone, data.code, context.auth.uid);
 });
 
 async function handleSendOtp(phone: string, callerUid: string) {
@@ -125,7 +124,11 @@ async function handleVerifyOtp(phone: string, code: string, callerUid: string) {
 
     info('OTP verify', { success: result.success });
 
-    return result;
+    // Return generic error to prevent phone enumeration
+    if (!result.success) {
+      return { success: false, error: 'Verification failed' };
+    }
+    return { success: true };
   } catch (err) {
     logError('verifyOtp error', { error: (err as Error).message });
     throw new functions.https.HttpsError('internal', 'Verification failed');
