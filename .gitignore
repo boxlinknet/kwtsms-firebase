@@ -32,6 +32,7 @@ CLAUDE.md
 docs/
 tests/
 test/
+!functions/tests/
 .playwright*
 
 # OS
