@@ -1,0 +1,164 @@
+name: kwtsms-firebase
+version: 0.1.0
+specVersion: v1beta
+
+displayName: kwtSMS - SMS Gateway
+description: >-
+  Send SMS notifications, OTP verification codes, and alerts via the kwtSMS
+  gateway. Supports Firestore queue, Auth triggers, HTTPS callables, and
+  scheduled sync.
+
+license: Apache-2.0
+
+author:
+  authorName: kwtSMS
+  url: https://www.kwtsms.com
+
+sourceUrl: https://github.com/boxlinknet/kwtsms-firebase
+
+billingRequired: true
+
+roles:
+  - role: datastore.user
+    reason: >-
+      Required to read/write SMS queue, templates, logs, OTP codes, and
+      configuration documents in Firestore.
+
+resources:
+  - name: processQueue
+    type: firebaseextensions.v1beta.function
+    description: >-
+      Sends SMS when a document is created in the SMS queue collection.
+    properties:
+      location: ${param:LOCATION}
+      runtime: nodejs18
+      eventTrigger:
+        eventType: providers/cloud.firestore/eventTypes/document.create
+        resource: projects/${param:PROJECT_ID}/databases/(default)/documents/${param:SMS_COLLECTION}/{docId}
+
+  - name: onUserCreate
+    type: firebaseextensions.v1beta.function
+    description: >-
+      Sends a welcome SMS when a new user signs up with a phone number.
+    properties:
+      location: ${param:LOCATION}
+      runtime: nodejs18
+      eventTrigger:
+        eventType: providers/firebase.auth/eventTypes/user.create
+        resource: projects/${param:PROJECT_ID}
+
+  - name: sendSms
+    type: firebaseextensions.v1beta.function
+    description: >-
+      HTTPS callable function to send SMS on demand from client apps.
+    properties:
+      location: ${param:LOCATION}
+      runtime: nodejs18
+      httpsTrigger: {}
+
+  - name: handleOtp
+    type: firebaseextensions.v1beta.function
+    description: >-
+      HTTPS callable function for OTP generation and verification.
+    properties:
+      location: ${param:LOCATION}
+      runtime: nodejs18
+      httpsTrigger: {}
+
+  - name: scheduledSync
+    type: firebaseextensions.v1beta.function
+    description: >-
+      Syncs balance, sender IDs, and coverage from kwtSMS daily.
+    properties:
+      location: ${param:LOCATION}
+      runtime: nodejs18
+      scheduleTrigger:
+        schedule: "every 24 hours"
+
+  - name: onInstallHandler
+    type: firebaseextensions.v1beta.function
+    description: >-
+      Seeds default templates, creates settings, and runs initial sync.
+    properties:
+      location: ${param:LOCATION}
+      runtime: nodejs18
+      taskQueueTrigger: {}
+
+lifecycleEvents:
+  onInstall:
+    function: onInstallHandler
+    processingMessage: Setting up kwtSMS extension...
+  onUpdate:
+    function: onInstallHandler
+    processingMessage: Updating kwtSMS extension...
+
+params:
+  - param: KWTSMS_USERNAME
+    label: kwtSMS API Username
+    description: >-
+      Your kwtSMS API username. Find this in your kwtSMS account settings.
+      This is NOT your account mobile number.
+    type: secret
+    required: true
+
+  - param: KWTSMS_PASSWORD
+    label: kwtSMS API Password
+    description: >-
+      Your kwtSMS API password. Find this in your kwtSMS account settings.
+    type: secret
+    required: true
+
+  - param: SMS_COLLECTION
+    label: SMS Queue Collection
+    description: >-
+      The Firestore collection to watch for outgoing SMS documents.
+    type: string
+    default: sms_queue
+    required: true
+
+  - param: SMS_TEMPLATES_COLLECTION
+    label: Templates Collection
+    description: >-
+      The Firestore collection for SMS message templates.
+    type: string
+    default: sms_templates
+    required: true
+
+  - param: SMS_LOGS_COLLECTION
+    label: Logs Collection
+    description: >-
+      The Firestore collection for SMS send logs.
+    type: string
+    default: sms_logs
+    required: true
+
+  - param: OTP_COLLECTION
+    label: OTP Codes Collection
+    description: >-
+      The Firestore collection for OTP verification codes.
+    type: string
+    default: otp_codes
+    required: true
+
+  - param: LOCATION
+    label: Cloud Functions Location
+    description: >-
+      Where to deploy the Cloud Functions for this extension.
+    type: select
+    options:
+      - label: us-central1 (Iowa)
+        value: us-central1
+      - label: us-east1 (South Carolina)
+        value: us-east1
+      - label: europe-west1 (Belgium)
+        value: europe-west1
+      - label: europe-west2 (London)
+        value: europe-west2
+      - label: asia-east1 (Taiwan)
+        value: asia-east1
+      - label: asia-southeast1 (Singapore)
+        value: asia-southeast1
+      - label: me-west1 (Tel Aviv)
+        value: me-west1
+    default: us-central1
+    required: true
