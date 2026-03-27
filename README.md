@@ -47,7 +47,7 @@ Install this extension in your Firebase project to send SMS through kwtSMS. Writ
 - Phone number normalization: strips prefixes, converts Arabic digits, prepends country codes
 - Configurable sender ID and default country code from synced API data
 - Global gateway on/off switch and test mode (no delivery, no credits consumed)
-- Firestore audit logs with masked phone numbers + Cloud Functions debug logging
+- Firestore audit logs + Cloud Functions debug logging
 
 ## Installation
 
@@ -163,7 +163,7 @@ Edit template bodies in the `sms_templates` Firestore collection. System templat
 
 ## Monitoring
 
-- **SMS logs**: `sms_logs` collection in Firestore (phone numbers are masked)
+- **SMS logs**: `sms_logs` collection in Firestore
 - **Balance and sync data**: `sms_config/sync` document
 - **Debug logs**: Enable `debug_logging` in settings, then check Cloud Functions logs in Google Cloud Console
 

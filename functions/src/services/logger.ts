@@ -4,7 +4,7 @@
  * Dual logging: writes structured entries to Firestore sms_logs collection
  * (always on) and to Cloud Functions logger (debug level controlled by config).
  *
- * Phone numbers are masked in Firestore logs. Credentials are never logged.
+ * Credentials are never logged.
  *
  * Related files:
  *   - config.ts: provides collection names and debug_logging setting
@@ -15,7 +15,6 @@
 
 import * as admin from 'firebase-admin';
 import * as functions from 'firebase-functions';
-import { maskPhone } from 'kwtsms';
 import { getCollectionNames, getSettings } from '../config';
 
 export type LogType = 'send' | 'otp' | 'welcome' | 'sync' | 'install' | 'error';
@@ -40,17 +39,15 @@ export async function writeLog(entry: LogEntry): Promise<void> {
   const collections = getCollectionNames();
   const db = admin.firestore();
 
-  // Mask phone number for Firestore log
-  const maskedEntry = {
+  const logEntry = {
     ...entry,
-    to: entry.to ? maskPhone(entry.to) : undefined,
     message_preview: entry.message_preview ? entry.message_preview.substring(0, 50) : undefined,
     createdAt: admin.firestore.FieldValue.serverTimestamp(),
   };
 
   // Strip undefined fields
   const cleanEntry = Object.fromEntries(
-    Object.entries(maskedEntry).filter(([, v]) => v !== undefined)
+    Object.entries(logEntry).filter(([, v]) => v !== undefined)
   );
 
   await db.collection(collections.smsLogs).add(cleanEntry);
