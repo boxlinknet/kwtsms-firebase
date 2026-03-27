@@ -2,7 +2,7 @@ import { describe, it, before } from 'node:test';
 import * as assert from 'node:assert';
 import * as admin from 'firebase-admin';
 
-process.env.FIRESTORE_EMULATOR_HOST = 'localhost:8080';
+process.env.FIRESTORE_EMULATOR_HOST = 'localhost:8181';
 if (!admin.apps.length) {
   admin.initializeApp({ projectId: 'test-project' });
 }

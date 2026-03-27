@@ -12,7 +12,7 @@
 import * as admin from 'firebase-admin';
 
 // Connect to Firestore emulator
-process.env.FIRESTORE_EMULATOR_HOST = 'localhost:8080';
+process.env.FIRESTORE_EMULATOR_HOST = 'localhost:8181';
 
 // Set extension params as env vars for testing
 process.env.SMS_COLLECTION = process.env.SMS_COLLECTION || 'sms_queue';
