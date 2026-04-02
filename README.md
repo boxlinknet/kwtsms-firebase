@@ -13,7 +13,7 @@
   <a href="https://github.com/boxlinknet/kwtsms-firebase/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue" alt="License"></a>
   <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-5.4-3178C6?logo=typescript&logoColor=white" alt="TypeScript"></a>
   <a href="https://firebase.google.com/docs/extensions"><img src="https://img.shields.io/badge/Firebase-Extension-FFCA28?logo=firebase&logoColor=black" alt="Firebase Extension"></a>
-  <a href="https://nodejs.org/"><img src="https://img.shields.io/badge/node-%3E%3D18-339933?logo=node.js&logoColor=white" alt="Node.js"></a>
+  <a href="https://nodejs.org/"><img src="https://img.shields.io/badge/node-%3E%3D20-339933?logo=node.js&logoColor=white" alt="Node.js"></a>
   <a href="https://www.kwtsms.com"><img src="https://img.shields.io/badge/SMS-kwtSMS-FFA200" alt="kwtSMS"></a>
 </p>
 
@@ -188,6 +188,15 @@ Edit template bodies in the `sms_templates` Firestore collection. System templat
 - **SMS logs**: `sms_logs` collection in Firestore
 - **Balance and sync data**: `sms_config/sync` document
 - **Debug logs**: Enable `debug_logging` in settings, then check Cloud Functions logs in Google Cloud Console
+
+## Roadmap
+
+| Phase | Status | Scope |
+|-------|--------|-------|
+| 1. Extension core | v0.1.0 | Queue, Auth, callable, OTP, sync, templates, logging |
+| 2. Dashboard | Planned | Settings UI, templates editor, logs viewer (Firebase Hosting) |
+| 3. Campaigns | Planned | Scheduled messages, reminders, bulk campaigns |
+| 4. Security | Planned | CAPTCHA, rate limiting, abuse prevention |
 
 ## Documentation
 
