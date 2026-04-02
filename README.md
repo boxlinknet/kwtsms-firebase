@@ -51,11 +51,33 @@ Install this extension in your Firebase project to send SMS through kwtSMS. Writ
 
 ## Installation
 
+### Prerequisites
+
+- [Firebase CLI](https://firebase.google.com/docs/cli) installed (`npm install -g firebase-tools`)
+- A Firebase project with Firestore enabled
+- A [kwtSMS account](https://www.kwtsms.com) with API access enabled
+
+### Install from GitHub
+
+```bash
+firebase ext:install https://github.com/boxlinknet/kwtsms-firebase --project=YOUR_PROJECT
+```
+
+### Install from Firebase Extensions Hub
+
 ```bash
 firebase ext:install kwtsms/kwtsms-firebase --project=YOUR_PROJECT
 ```
 
-You need a [kwtSMS account](https://www.kwtsms.com) with API access enabled. During installation, provide your API username and password. These are stored securely in Cloud Secret Manager.
+### Install from local source
+
+```bash
+git clone https://github.com/boxlinknet/kwtsms-firebase.git
+cd kwtsms-firebase/functions && npm install && npx tsc && cd ..
+firebase ext:install . --project=YOUR_PROJECT
+```
+
+During installation, you will be prompted for your kwtSMS API username and password. These are stored securely in [Cloud Secret Manager](https://cloud.google.com/secret-manager).
 
 ## Configuration
 
