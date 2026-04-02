@@ -9,6 +9,10 @@ description: >-
   scheduled sync.
 
 license: Apache-2.0
+icon: icon.png
+
+tags:
+  - messaging
 
 author:
   authorName: kwtSMS
@@ -17,6 +21,10 @@ author:
 sourceUrl: https://github.com/boxlinknet/kwtsms-firebase
 
 billingRequired: true
+
+externalServices:
+  - name: kwtSMS API
+    pricingUri: https://www.kwtsms.com
 
 roles:
   - role: datastore.user
@@ -31,7 +39,7 @@ resources:
       Sends SMS when a document is created in the SMS queue collection.
     properties:
       location: ${param:LOCATION}
-      runtime: nodejs18
+      runtime: nodejs20
       eventTrigger:
         eventType: providers/cloud.firestore/eventTypes/document.create
         resource: projects/${param:PROJECT_ID}/databases/(default)/documents/${param:SMS_COLLECTION}/{docId}
@@ -42,7 +50,7 @@ resources:
       Sends a welcome SMS when a new user signs up with a phone number.
     properties:
       location: ${param:LOCATION}
-      runtime: nodejs18
+      runtime: nodejs20
       eventTrigger:
         eventType: providers/firebase.auth/eventTypes/user.create
         resource: projects/${param:PROJECT_ID}
@@ -53,7 +61,7 @@ resources:
       HTTPS callable function to send SMS on demand from client apps.
     properties:
       location: ${param:LOCATION}
-      runtime: nodejs18
+      runtime: nodejs20
       httpsTrigger: {}
 
   - name: handleOtp
@@ -62,7 +70,7 @@ resources:
       HTTPS callable function for OTP generation and verification.
     properties:
       location: ${param:LOCATION}
-      runtime: nodejs18
+      runtime: nodejs20
       httpsTrigger: {}
 
   - name: scheduledSync
@@ -71,7 +79,7 @@ resources:
       Syncs balance, sender IDs, and coverage from kwtSMS daily.
     properties:
       location: ${param:LOCATION}
-      runtime: nodejs18
+      runtime: nodejs20
       scheduleTrigger:
         schedule: "every 24 hours"
 
@@ -81,7 +89,7 @@ resources:
       Seeds default templates, creates settings, and runs initial sync.
     properties:
       location: ${param:LOCATION}
-      runtime: nodejs18
+      runtime: nodejs20
       taskQueueTrigger: {}
 
 lifecycleEvents:
