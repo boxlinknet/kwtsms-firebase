@@ -1,4 +1,4 @@
-import { describe, it, before, after } from 'node:test';
+import { describe, it, before, beforeEach } from 'node:test';
 import * as assert from 'node:assert';
 import * as admin from 'firebase-admin';
 
@@ -8,7 +8,7 @@ if (!admin.apps.length) {
   admin.initializeApp({ projectId: 'test-project' });
 }
 
-import { getSettings, getSyncData, getCollectionNames, DEFAULTS } from '../src/config';
+import { getSettings, getSyncData, getCollectionNames, DEFAULTS, clearConfigCache } from '../src/config';
 
 const db = admin.firestore();
 
@@ -20,6 +20,11 @@ describe('Config Service', () => {
     await syncRef.delete().catch(() => {});
   });
 
+  // Clear in-memory cache before each test to avoid stale reads
+  beforeEach(() => {
+    clearConfigCache();
+  });
+
   it('returns default settings when no Firestore document exists', async () => {
     const settings = await getSettings();
     assert.strictEqual(settings.gateway_enabled, true);
@@ -27,6 +32,7 @@ describe('Config Service', () => {
     assert.strictEqual(settings.debug_logging, false);
     assert.strictEqual(settings.default_country_code, '965');
     assert.strictEqual(settings.selected_sender_id, 'KWT-SMS');
+    assert.strictEqual(settings.app_name, 'My App');
   });
 
   it('reads settings from Firestore when document exists', async () => {
@@ -36,6 +42,7 @@ describe('Config Service', () => {
       debug_logging: true,
       default_country_code: '966',
       selected_sender_id: 'MY-APP',
+      app_name: 'Test Store',
     });
 
     const settings = await getSettings();
@@ -44,6 +51,7 @@ describe('Config Service', () => {
     assert.strictEqual(settings.debug_logging, true);
     assert.strictEqual(settings.default_country_code, '966');
     assert.strictEqual(settings.selected_sender_id, 'MY-APP');
+    assert.strictEqual(settings.app_name, 'Test Store');
   });
 
   it('returns null sync data when no document exists', async () => {

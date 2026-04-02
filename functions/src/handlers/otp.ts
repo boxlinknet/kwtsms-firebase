@@ -4,14 +4,15 @@
  * HTTPS callable function for OTP generation and verification.
  * Two actions: sendOtp and verifyOtp.
  *
- * sendOtp: generates code, stores in Firestore, sends via kwtSMS.
- * verifyOtp: checks code, enforces max attempts and expiry.
+ * sendOtp: generates code, stores in Firestore (hashed), sends via kwtSMS.
+ * verifyOtp: checks code (timing-safe), enforces max attempts and expiry.
  *
  * Uses generic error messages to prevent phone number enumeration.
  * Requires Firebase Auth (caller must be authenticated).
+ * Rate limited: 60-second cooldown between OTP sends to the same phone.
  *
  * Related files:
- *   - services/otp.ts: generateCode(), storeOtp(), verifyOtp()
+ *   - services/otp.ts: generateCode(), storeOtp(), verifyOtp(), checkCooldown()
  *   - services/sms.ts: buildSendPipeline()
  *   - services/logger.ts: logging
  */
@@ -19,7 +20,7 @@
 import * as functions from 'firebase-functions';
 import { normalizePhone } from 'kwtsms';
 import { getSettings, getSyncData } from '../config';
-import { generateCode, storeOtp, verifyOtp as verifyOtpCode } from '../services/otp';
+import { generateCode, storeOtp, verifyOtp as verifyOtpCode, checkCooldown } from '../services/otp';
 import { buildSendPipeline } from '../services/sms';
 import { writeLog, info, error as logError } from '../services/logger';
 
@@ -46,7 +47,17 @@ export const handleOtp = functions.https.onCall(async (data: OtpRequest, context
     );
   }
 
-  const phone = normalizePhone(data.phone);
+  // Normalize phone with error handling for malformed input
+  let phone: string;
+  try {
+    phone = normalizePhone(data.phone);
+  } catch {
+    throw new functions.https.HttpsError('invalid-argument', 'Invalid phone number format.');
+  }
+
+  if (!phone) {
+    throw new functions.https.HttpsError('invalid-argument', 'Invalid phone number format.');
+  }
 
   if (data.action === 'sendOtp') {
     return handleSendOtp(phone, context.auth.uid);
@@ -61,6 +72,15 @@ export const handleOtp = functions.https.onCall(async (data: OtpRequest, context
 
 async function handleSendOtp(phone: string, callerUid: string) {
   try {
+    // Enforce cooldown: 60 seconds between OTP sends to the same phone
+    const onCooldown = await checkCooldown(phone);
+    if (onCooldown) {
+      throw new functions.https.HttpsError(
+        'resource-exhausted',
+        'Please wait before requesting a new code.'
+      );
+    }
+
     const settings = await getSettings();
     const syncData = await getSyncData();
     const code = generateCode();
@@ -72,13 +92,14 @@ async function handleSendOtp(phone: string, callerUid: string) {
       template: 'otp',
       templateData: {
         code,
-        app_name: 'our app',
+        app_name: settings.app_name,
         expiry_minutes: '5',
       },
       language: 'en',
       settings,
       syncData,
       trigger: 'otp',
+      metadata: { callerUid },
     });
 
     await writeLog({

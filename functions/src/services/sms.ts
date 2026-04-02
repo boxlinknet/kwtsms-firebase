@@ -37,6 +37,7 @@ export interface SendPipelineInput {
   settings?: Settings;
   syncData?: SyncData | null;
   trigger?: LogTrigger;
+  metadata?: Record<string, unknown>;
 }
 
 export interface SendPipelineResult {
@@ -151,9 +152,11 @@ export async function buildSendPipeline(input: SendPipelineInput): Promise<SendP
     return { status: 'failed', error: 'No valid numbers after filtering' };
   }
 
-  // 5. Check cached balance
+  // 5. Warn on low cached balance (but don't block, cache may be stale)
   if (syncData && syncData.balance <= 0) {
-    return { status: 'failed', error: 'Zero balance' };
+    await debug('Cached balance is zero or negative (may be stale), proceeding', {
+      balance: syncData.balance,
+    });
   }
 
   // 6. Send via kwtsms-js (handles dedup, cleaning, batching, retry)
@@ -199,6 +202,7 @@ export async function buildSendPipeline(input: SendPipelineInput): Promise<SendP
       response: response as unknown as Record<string, unknown>,
       error: result.error,
       duration_ms: duration,
+      metadata: input.metadata,
     });
   } catch (err) {
     const duration = Date.now() - startTime;
@@ -222,6 +226,7 @@ export async function buildSendPipeline(input: SendPipelineInput): Promise<SendP
       response: null,
       error: (err as Error).message,
       duration_ms: duration,
+      metadata: input.metadata,
     });
   }
 

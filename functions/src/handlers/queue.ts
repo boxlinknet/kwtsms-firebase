@@ -9,6 +9,8 @@
  * Output fields added: status, response, error, processedAt, createdAt
  *
  * Skips documents with source='callable' to prevent trigger loops.
+ * Validates required fields before processing.
+ * Idempotency guard: skips documents already in processing/sent state (retry safety).
  *
  * Related files:
  *   - services/sms.ts: buildSendPipeline()
@@ -35,6 +37,31 @@ export const processQueue = functions.firestore
     // Skip documents created by callable handler (audit trail only)
     if (data.source === 'callable') {
       await debug('Skipping callable audit document', { docId: context.params.docId });
+      return;
+    }
+
+    // Idempotency guard: skip if already processed (retry safety)
+    if (data.status === 'processing' || data.status === 'sent') {
+      await debug('Skipping already processed document', { docId: context.params.docId, status: data.status });
+      return;
+    }
+
+    // Validate required fields
+    if (!data.to || typeof data.to !== 'string') {
+      await docRef.update({
+        status: 'failed',
+        error: 'Missing or invalid required field: "to"',
+        processedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+      return;
+    }
+
+    if (!data.message && !data.template) {
+      await docRef.update({
+        status: 'failed',
+        error: 'Either "message" or "template" is required',
+        processedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
       return;
     }
 

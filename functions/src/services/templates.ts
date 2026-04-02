@@ -22,6 +22,22 @@ export function renderTemplate(body: string, data: Record<string, string>): stri
 }
 
 /**
+ * Validate a Firestore document ID. Rejects slashes, empty strings,
+ * and excessively long names.
+ */
+function validateDocId(name: string): void {
+  if (!name || typeof name !== 'string') {
+    throw new Error('Template name is required.');
+  }
+  if (name.includes('/')) {
+    throw new Error(`Invalid template name: "${name}" (must not contain "/").`);
+  }
+  if (name.length > 1500) {
+    throw new Error(`Template name too long (max 1500 characters).`);
+  }
+}
+
+/**
  * Resolve the final message text from either an inline message or a template reference.
  * Returns the rendered message string.
  */
@@ -39,6 +55,8 @@ export async function resolveMessage(params: {
   if (!params.template) {
     throw new Error('Either "message" or "template" must be provided.');
   }
+
+  validateDocId(params.template);
 
   const collections = getCollectionNames();
   const db = admin.firestore();

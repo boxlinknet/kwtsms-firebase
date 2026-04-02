@@ -2,20 +2,22 @@
  * Callable Handler
  *
  * HTTPS callable function for on-demand SMS sending from client apps.
- * Creates an audit trail document in sms_queue and logs to sms_logs.
+ * Logs the send to sms_logs via the pipeline (no separate queue write).
  *
  * Requires Firebase Auth (caller must be authenticated).
+ * Rate limited to 10 sends per minute per user.
  *
  * Related files:
  *   - services/sms.ts: buildSendPipeline()
- *   - config.ts: getSettings(), getSyncData(), getCollectionNames()
+ *   - services/rate-limit.ts: per-user send throttle
+ *   - config.ts: getSettings(), getSyncData()
  *   - services/logger.ts: logging
  */
 
 import * as functions from 'firebase-functions';
-import * as admin from 'firebase-admin';
-import { getSettings, getSyncData, getCollectionNames } from '../config';
+import { getSettings, getSyncData } from '../config';
 import { buildSendPipeline } from '../services/sms';
+import { checkSendRateLimit } from '../services/rate-limit';
 import { info, error as logError } from '../services/logger';
 
 interface SendSmsRequest {
@@ -45,10 +47,18 @@ export const sendSms = functions.https.onCall(async (data: SendSmsRequest, conte
     );
   }
 
+  // Rate limit: 10 sends per minute per user
+  const rateLimited = await checkSendRateLimit(context.auth.uid);
+  if (rateLimited) {
+    throw new functions.https.HttpsError(
+      'resource-exhausted',
+      'Too many requests. Please wait before sending again.'
+    );
+  }
+
   try {
     const settings = await getSettings();
     const syncData = await getSyncData();
-    const collections = getCollectionNames();
 
     const result = await buildSendPipeline({
       to: data.to,
@@ -60,29 +70,11 @@ export const sendSms = functions.https.onCall(async (data: SendSmsRequest, conte
       settings,
       syncData,
       trigger: 'callable',
-    });
-
-    // Write audit trail to sms_queue
-    const db = admin.firestore();
-    await db.collection(collections.smsQueue).add({
-      to: data.to,
-      message: result.message || data.message,
-      template: data.template || null,
-      templateData: data.templateData || null,
-      language: data.language || 'en',
-      sender: data.sender || settings.selected_sender_id,
-      status: result.status,
-      response: result.response || null,
-      error: result.error || null,
-      test: settings.test_mode,
-      source: 'callable',
-      callerUid: context.auth.uid,
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      processedAt: admin.firestore.FieldValue.serverTimestamp(),
+      metadata: { callerUid: context.auth.uid },
     });
 
     if (result.status === 'failed') {
-      throw new functions.https.HttpsError('internal', result.error || 'Send failed');
+      throw new functions.https.HttpsError('internal', 'Failed to send SMS');
     }
 
     info('Callable sendSms', { status: result.status, callerUid: context.auth.uid });

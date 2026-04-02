@@ -1,15 +1,20 @@
 import { describe, it, before } from 'node:test';
 import * as assert from 'node:assert';
 import * as admin from 'firebase-admin';
+import * as crypto from 'crypto';
 
 process.env.FIRESTORE_EMULATOR_HOST = 'localhost:8181';
 if (!admin.apps.length) {
   admin.initializeApp({ projectId: 'test-project' });
 }
 
-import { generateCode, storeOtp, verifyOtp } from '../src/services/otp';
+import { generateCode, storeOtp, verifyOtp, checkCooldown } from '../src/services/otp';
 
 const db = admin.firestore();
+
+function sha256(value: string): string {
+  return crypto.createHash('sha256').update(value).digest('hex');
+}
 
 describe('OTP Service', () => {
   before(async () => {
@@ -33,13 +38,14 @@ describe('OTP Service', () => {
   });
 
   describe('storeOtp', () => {
-    it('stores OTP code in Firestore with expiry', async () => {
+    it('stores hashed OTP code in Firestore with expiry', async () => {
       const code = '123456';
       await storeOtp('96598765432', code);
 
-      const doc = await db.collection('otp_codes').doc('96598765432').get();
+      const docId = sha256('96598765432');
+      const doc = await db.collection('otp_codes').doc(docId).get();
       assert.ok(doc.exists);
-      assert.strictEqual(doc.data()!.code, code);
+      assert.strictEqual(doc.data()!.code, sha256(code));
       assert.strictEqual(doc.data()!.attempts, 0);
       assert.ok(doc.data()!.expiresAt);
     });
@@ -48,9 +54,23 @@ describe('OTP Service', () => {
       await storeOtp('96598765432', '111111');
       await storeOtp('96598765432', '222222');
 
-      const doc = await db.collection('otp_codes').doc('96598765432').get();
-      assert.strictEqual(doc.data()!.code, '222222');
+      const docId = sha256('96598765432');
+      const doc = await db.collection('otp_codes').doc(docId).get();
+      assert.strictEqual(doc.data()!.code, sha256('222222'));
       assert.strictEqual(doc.data()!.attempts, 0);
+    });
+  });
+
+  describe('checkCooldown', () => {
+    it('returns true when OTP was recently sent', async () => {
+      await storeOtp('96511111111', '123456');
+      const onCooldown = await checkCooldown('96511111111');
+      assert.strictEqual(onCooldown, true);
+    });
+
+    it('returns false for unknown phone', async () => {
+      const onCooldown = await checkCooldown('96500000001');
+      assert.strictEqual(onCooldown, false);
     });
   });
 
@@ -62,7 +82,8 @@ describe('OTP Service', () => {
     });
 
     it('deletes OTP document after successful verification', async () => {
-      const doc = await db.collection('otp_codes').doc('96512345678').get();
+      const docId = sha256('96512345678');
+      const doc = await db.collection('otp_codes').doc(docId).get();
       assert.ok(!doc.exists);
     });
 
@@ -74,7 +95,8 @@ describe('OTP Service', () => {
     });
 
     it('increments attempts on wrong code', async () => {
-      const doc = await db.collection('otp_codes').doc('96512345678').get();
+      const docId = sha256('96512345678');
+      const doc = await db.collection('otp_codes').doc(docId).get();
       assert.strictEqual(doc.data()!.attempts, 1);
     });
 

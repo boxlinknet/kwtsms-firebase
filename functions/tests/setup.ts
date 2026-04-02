@@ -10,6 +10,7 @@
  */
 
 import * as admin from 'firebase-admin';
+import { clearConfigCache } from '../src/config';
 
 // Connect to Firestore emulator
 process.env.FIRESTORE_EMULATOR_HOST = 'localhost:8181';
@@ -34,6 +35,7 @@ export async function seedSettings(): Promise<void> {
     debug_logging: true,
     default_country_code: '965',
     selected_sender_id: 'KWT-SMS',
+    app_name: 'Test App',
   });
 }
 
@@ -51,9 +53,10 @@ export async function seedSync(): Promise<void> {
   });
 }
 
-/** Clean all test data from emulator. */
+/** Clean all test data from emulator and reset config cache. */
 export async function cleanUp(): Promise<void> {
-  const collections = ['sms_queue', 'sms_templates', 'sms_logs', 'otp_codes'];
+  clearConfigCache();
+  const collections = ['sms_queue', 'sms_templates', 'sms_logs', 'otp_codes', 'sms_rate_limits'];
   for (const col of collections) {
     const snap = await db.collection(col).get();
     const batch = db.batch();

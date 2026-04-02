@@ -148,6 +148,15 @@ params:
     default: otp_codes
     required: true
 
+  - param: APP_NAME
+    label: Application Name
+    description: >-
+      Your application name, used in SMS templates (welcome messages, OTP
+      codes, etc.). For example: "MyStore" or "Acme Corp".
+    type: string
+    default: My App
+    required: false
+
   - param: LOCATION
     label: Cloud Functions Location
     description: >-

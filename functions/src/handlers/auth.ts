@@ -5,7 +5,7 @@
  * who have a phone number on their Auth record.
  *
  * Respects gateway_enabled and test_mode settings. Skips silently
- * if no phone number is present.
+ * if no phone number is present. Uses configurable app_name from settings.
  *
  * Related files:
  *   - services/sms.ts: buildSendPipeline()
@@ -37,7 +37,7 @@ export const onUserCreate = functions.auth.user().onCreate(async (user) => {
       to: phone,
       template: 'welcome',
       templateData: {
-        app_name: 'our app',
+        app_name: settings.app_name,
       },
       language: 'en',
       settings,
