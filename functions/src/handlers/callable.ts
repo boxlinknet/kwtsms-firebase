@@ -82,7 +82,6 @@ export const sendSms = functions.https.onCall(async (data: SendSmsRequest, conte
     return {
       success: true,
       msgId: (result.response as Record<string, unknown>)?.['msg-id'] || null,
-      balanceAfter: (result.response as Record<string, unknown>)?.['balance-after'] || null,
     };
   } catch (err) {
     if (err instanceof functions.https.HttpsError) throw err;

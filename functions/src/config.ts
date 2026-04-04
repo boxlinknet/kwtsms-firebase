@@ -108,7 +108,7 @@ export async function getSettings(): Promise<Settings> {
   }
 
   settingsCache = { value: settings, expires: Date.now() + CACHE_TTL_MS };
-  return settings;
+  return { ...settings };
 }
 
 export async function getSyncData(): Promise<SyncData | null> {
@@ -133,5 +133,5 @@ export async function getSyncData(): Promise<SyncData | null> {
   }
 
   syncDataCache = { value: syncData, expires: Date.now() + CACHE_TTL_MS };
-  return syncData;
+  return syncData ? { ...syncData } : null;
 }

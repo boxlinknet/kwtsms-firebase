@@ -3,7 +3,7 @@ import * as assert from 'node:assert';
 import { db, seedSettings, seedSync, cleanUp } from './setup';
 import { buildSendPipeline } from '../src/services/sms';
 import { runSync } from '../src/handlers/scheduled';
-import { getSettings, getSyncData } from '../src/config';
+import { getSettings, getSyncData, clearConfigCache } from '../src/config';
 
 describe('Integration Tests (real kwtSMS API, test=1)', () => {
   before(async () => {
@@ -101,6 +101,7 @@ describe('Integration Tests (real kwtSMS API, test=1)', () => {
     });
 
     it('prepends country code to local number', async () => {
+      clearConfigCache();
       const settings = await getSettings();
       settings.default_country_code = '966';
       const syncData = await getSyncData();
@@ -113,8 +114,8 @@ describe('Integration Tests (real kwtSMS API, test=1)', () => {
         trigger: 'callable',
       });
 
-      // Should attempt to send to 966587469874
-      assert.ok(result.status === 'sent' || result.status === 'failed');
+      // Pipeline should process (not skip); send may succeed or fail depending on API
+      assert.notStrictEqual(result.status, 'skipped', 'should not be skipped (gateway is enabled)');
     });
 
     it('writes log entry to sms_logs', async () => {

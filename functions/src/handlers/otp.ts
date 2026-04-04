@@ -75,10 +75,7 @@ async function handleSendOtp(phone: string, callerUid: string) {
     // Enforce cooldown: 60 seconds between OTP sends to the same phone
     const onCooldown = await checkCooldown(phone);
     if (onCooldown) {
-      throw new functions.https.HttpsError(
-        'resource-exhausted',
-        'Please wait before requesting a new code.'
-      );
+      throw new functions.https.HttpsError('internal', 'Failed to send verification code');
     }
 
     const settings = await getSettings();
