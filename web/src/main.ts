@@ -7,36 +7,20 @@
 import './styles/main.css';
 import { onAuth, login } from './firebase';
 import { initRouter, registerRoute } from './router';
-import { renderHeader } from './components/header';
+import { renderDashboard } from './pages/dashboard';
+import { renderSettings } from './pages/settings';
+import { renderTemplates } from './pages/templates';
+import { renderLogs } from './pages/logs';
+import { renderHelp } from './pages/help';
 
 const appEl = document.getElementById('app')!;
 
-// Helper to set trusted HTML content (all sources are admin-controlled)
-function setTrustedHTML(el: HTMLElement, html: string): void {
-  el.innerHTML = html; // eslint-disable-line no-unsanitized/property
-}
-
-// Register pages (stubs for now, replaced in Tasks 4-8)
-registerRoute({
-  id: 'dashboard',
-  render: (c) => { setTrustedHTML(c, renderHeader('Dashboard', '') + '<div class="content"><p>Coming soon...</p></div>'); },
-});
-registerRoute({
-  id: 'settings',
-  render: (c) => { setTrustedHTML(c, renderHeader('Settings', '') + '<div class="content"><p>Coming soon...</p></div>'); },
-});
-registerRoute({
-  id: 'templates',
-  render: (c) => { setTrustedHTML(c, renderHeader('Templates', '') + '<div class="content"><p>Coming soon...</p></div>'); },
-});
-registerRoute({
-  id: 'logs',
-  render: (c) => { setTrustedHTML(c, renderHeader('SMS Logs', '') + '<div class="content"><p>Coming soon...</p></div>'); },
-});
-registerRoute({
-  id: 'help',
-  render: (c) => { setTrustedHTML(c, renderHeader('Help', '') + '<div class="content"><p>Coming soon...</p></div>'); },
-});
+// Register all pages
+registerRoute({ id: 'dashboard', render: renderDashboard });
+registerRoute({ id: 'settings', render: renderSettings });
+registerRoute({ id: 'templates', render: renderTemplates });
+registerRoute({ id: 'logs', render: renderLogs });
+registerRoute({ id: 'help', render: renderHelp });
 
 // Auth gate
 onAuth((user) => {
