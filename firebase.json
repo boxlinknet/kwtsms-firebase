@@ -2,9 +2,19 @@
   "firestore": {
     "rules": "firestore.rules"
   },
+  "hosting": {
+    "public": "web/dist",
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+    "rewrites": [
+      { "source": "**", "destination": "/index.html" }
+    ]
+  },
   "emulators": {
     "firestore": {
       "port": 8181
+    },
+    "hosting": {
+      "port": 5050
     },
     "ui": {
       "enabled": false

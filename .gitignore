@@ -35,6 +35,10 @@ test/
 !functions/tests/
 .playwright*
 
+# Web dashboard
+web/dist/
+web/node_modules/
+
 # OS
 .DS_Store
 Thumbs.db
