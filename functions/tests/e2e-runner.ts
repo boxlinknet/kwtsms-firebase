@@ -596,6 +596,26 @@ describe('Phase K: Firestore Rules', () => {
     assert.ok(rlMatch, 'sms_rate_limits rule block must exist');
     assert.ok(rlMatch![1].includes('if false'), 'sms_rate_limits should deny all client access');
   });
+
+  it('K-5: isAdmin function exists for dashboard access', () => {
+    const rules = readFileSync('../firestore.rules', 'utf-8');
+    assert.ok(rules.includes('function isAdmin()'), 'isAdmin helper must exist');
+    assert.ok(rules.includes('request.auth.token.admin'), 'isAdmin must check admin custom claim');
+  });
+
+  it('K-6: sms_config allows admin access for dashboard', () => {
+    const rules = readFileSync('../firestore.rules', 'utf-8');
+    const configMatch = rules.match(/match\s+\/sms_config\/\{[^}]+\}\s*\{([^}]+)\}/);
+    assert.ok(configMatch, 'sms_config rule block must exist');
+    assert.ok(configMatch![1].includes('isAdmin()'), 'sms_config should allow admin access');
+  });
+
+  it('K-7: sms_logs allows admin read for dashboard', () => {
+    const rules = readFileSync('../firestore.rules', 'utf-8');
+    const logsMatch = rules.match(/match\s+\/sms_logs\/\{[^}]+\}\s*\{([^}]+)\}/);
+    assert.ok(logsMatch, 'sms_logs rule block must exist');
+    assert.ok(logsMatch![1].includes('isAdmin()'), 'sms_logs should allow admin read');
+  });
 });
 
 // ============================================================
