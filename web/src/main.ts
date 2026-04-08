@@ -1,9 +1,44 @@
+// kwtSMS Dashboard - Main entry point
+// Security: Admin-only dashboard behind Firebase Auth + custom claim.
+// All HTML rendered is from trusted static templates and admin-controlled
+// Firestore data. No untrusted user input is rendered. innerHTML usage is
+// intentional for rendering trusted admin UI components.
+
 import './styles/main.css';
 import { onAuth, login } from './firebase';
-import { initRouter } from './router';
+import { initRouter, registerRoute } from './router';
+import { renderHeader } from './components/header';
 
 const appEl = document.getElementById('app')!;
 
+// Helper to set trusted HTML content (all sources are admin-controlled)
+function setTrustedHTML(el: HTMLElement, html: string): void {
+  el.innerHTML = html; // eslint-disable-line no-unsanitized/property
+}
+
+// Register pages (stubs for now, replaced in Tasks 4-8)
+registerRoute({
+  id: 'dashboard',
+  render: (c) => { setTrustedHTML(c, renderHeader('Dashboard', '') + '<div class="content"><p>Coming soon...</p></div>'); },
+});
+registerRoute({
+  id: 'settings',
+  render: (c) => { setTrustedHTML(c, renderHeader('Settings', '') + '<div class="content"><p>Coming soon...</p></div>'); },
+});
+registerRoute({
+  id: 'templates',
+  render: (c) => { setTrustedHTML(c, renderHeader('Templates', '') + '<div class="content"><p>Coming soon...</p></div>'); },
+});
+registerRoute({
+  id: 'logs',
+  render: (c) => { setTrustedHTML(c, renderHeader('SMS Logs', '') + '<div class="content"><p>Coming soon...</p></div>'); },
+});
+registerRoute({
+  id: 'help',
+  render: (c) => { setTrustedHTML(c, renderHeader('Help', '') + '<div class="content"><p>Coming soon...</p></div>'); },
+});
+
+// Auth gate
 onAuth((user) => {
   if (!user) {
     renderLogin();
