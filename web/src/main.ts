@@ -5,7 +5,7 @@
 // intentional for rendering trusted admin UI components.
 
 import './styles/main.css';
-import { onAuth, login } from './firebase';
+import { onAuth, login, DEV_MODE } from './firebase';
 import { initRouter, registerRoute } from './router';
 import { renderDashboard } from './pages/dashboard';
 import { renderSettings } from './pages/settings';
@@ -22,14 +22,18 @@ registerRoute({ id: 'templates', render: renderTemplates });
 registerRoute({ id: 'logs', render: renderLogs });
 registerRoute({ id: 'help', render: renderHelp });
 
-// Auth gate
-onAuth((user) => {
-  if (!user) {
-    renderLogin();
-  } else {
-    initRouter(appEl);
-  }
-});
+// Auth gate (DEV_MODE skips auth for local development)
+if (DEV_MODE) {
+  initRouter(appEl);
+} else {
+  onAuth((user) => {
+    if (!user) {
+      renderLogin();
+    } else {
+      initRouter(appEl);
+    }
+  });
+}
 
 function renderLogin(): void {
   const page = document.createElement('div');

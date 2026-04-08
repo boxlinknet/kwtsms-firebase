@@ -149,7 +149,7 @@ export async function renderTemplates(container: HTMLElement): Promise<void> {
   const contentEl = container.querySelector('.content')!;
 
   async function refresh(): Promise<void> {
-    const templates = await loadTemplates();
+    const templates = await loadTemplates().catch(() => [] as Template[]);
     const countHtml = `<span style="font-size:13px;color:var(--text-muted);margin-right:12px;">${templates.length} templates</span>`;
     container.querySelector('.header-actions')!.innerHTML = countHtml + newBtn;
     contentEl.innerHTML = renderTable(templates);

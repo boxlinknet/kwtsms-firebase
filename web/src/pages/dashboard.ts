@@ -1,10 +1,10 @@
 // Dashboard page - stat cards, recent activity, quick settings
 // Security: Admin-only dashboard. All data from admin-controlled Firestore.
-// No untrusted user input rendered. innerHTML used for trusted template strings.
 
 import { renderHeader } from '../components/header';
 import { loadSettings, saveSettings, loadSyncData, loadLogs } from '../firebase';
 import type { Settings, SyncData, LogEntry } from '../types';
+import { SETTINGS_DEFAULTS } from '../types';
 
 function timeAgo(date: Date): string {
   const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
@@ -13,23 +13,16 @@ function timeAgo(date: Date): string {
   if (minutes < 60) return `${minutes}m ago`;
   const hours = Math.floor(minutes / 60);
   if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
+  return `${Math.floor(hours / 24)}d ago`;
 }
 
 function statusBadge(status: string): string {
-  const cls = status === 'sent' || status === 'success' ? 'sent' :
-    status === 'failed' ? 'failed' :
-    status === 'verified' ? 'verified' :
-    status === 'skipped' ? 'skipped' : 'test';
+  const cls = status === 'sent' || status === 'success' ? 'sent' : status === 'failed' ? 'failed' : status === 'verified' ? 'verified' : status === 'skipped' ? 'skipped' : 'test';
   return `<span class="status ${cls}"><span class="status-dot"></span> ${status.charAt(0).toUpperCase() + status.slice(1)}</span>`;
 }
 
 function typeColor(type: string): string {
-  const colors: Record<string, string> = {
-    send: 'var(--primary)', otp: '#7C3AED', welcome: 'var(--success)',
-    sync: 'var(--accent)', callable: 'var(--primary)',
-  };
+  const colors: Record<string, string> = { send: 'var(--primary)', otp: '#7C3AED', welcome: 'var(--success)', sync: 'var(--accent)', callable: 'var(--primary)' };
   return colors[type] || 'var(--text-muted)';
 }
 
@@ -107,8 +100,10 @@ export async function renderDashboard(container: HTMLElement): Promise<void> {
 
   container.innerHTML = renderHeader('Dashboard', testBadge + syncBtn) + '<div class="content"><p style="color:var(--text-muted);">Loading dashboard...</p></div>';
 
+  // Graceful loading: catch errors so page still renders with defaults
   const [settings, sync, logs] = await Promise.all([
-    loadSettings(), loadSyncData(),
+    loadSettings().catch(() => ({ ...SETTINGS_DEFAULTS })),
+    loadSyncData().catch(() => null),
     loadLogs({ pageSize: 5 }).catch(() => [] as LogEntry[]),
   ]);
 
@@ -125,7 +120,7 @@ export async function renderDashboard(container: HTMLElement): Promise<void> {
       const next = !current;
       s[key] = next;
       el.className = next ? `toggle ${key === 'test_mode' ? 'warn' : 'on'}` : 'toggle';
-      await saveSettings(settings);
+      await saveSettings(settings).catch(() => {});
     });
   });
 }

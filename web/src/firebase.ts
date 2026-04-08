@@ -1,16 +1,34 @@
 import { initializeApp } from 'firebase/app';
-import { getFirestore, doc, getDoc, setDoc, collection, query, orderBy, limit, getDocs, deleteDoc } from 'firebase/firestore';
-import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, type User } from 'firebase/auth';
+import { getFirestore, connectFirestoreEmulator, doc, getDoc, setDoc, collection, query, orderBy, limit, getDocs, deleteDoc } from 'firebase/firestore';
+import { getAuth, connectAuthEmulator, signInWithEmailAndPassword, onAuthStateChanged, signOut, type User } from 'firebase/auth';
 import type { Settings, SyncData, LogEntry, Template } from './types';
 import { SETTINGS_DEFAULTS } from './types';
 
-// Firebase Hosting auto-provides config via /__/firebase/init.json
-// For local dev, populate this or use the emulator
-const firebaseConfig = {};
+// Firebase config: Hosting auto-provides via /__/firebase/init.json
+// For local dev with emulator, use the test project config
+const firebaseConfig = {
+  projectId: 'test-project',
+  apiKey: 'fake-api-key',
+  authDomain: 'test-project.firebaseapp.com',
+};
 
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
 export const auth = getAuth(app);
+
+// Connect to emulators in development
+if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+  try {
+    connectFirestoreEmulator(db, 'localhost', 8181);
+    connectAuthEmulator(auth, 'http://localhost:9099', { disableWarnings: true });
+  } catch {
+    // Already connected
+  }
+}
+
+// Dev mode: skip auth when ?dev=1 is in the URL (local dev only)
+export const DEV_MODE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+  && new URLSearchParams(location.search).has('dev');
 
 // --- Settings ---
 

@@ -4,6 +4,7 @@
 import { renderHeader } from '../components/header';
 import { loadSettings, saveSettings, loadSyncData } from '../firebase';
 import { bindToggles } from '../components/toggle';
+import { SETTINGS_DEFAULTS } from '../types';
 import type { Settings, SyncData } from '../types';
 
 function warningBanner(): string {
@@ -92,8 +93,8 @@ export async function renderSettings(container: HTMLElement): Promise<void> {
   </button>`;
   container.innerHTML = renderHeader('Settings', saveBtnHtml) + '<div class="content" style="max-width:720px;"><p style="color:var(--text-muted);">Loading...</p></div>';
 
-  let settings = await loadSettings();
-  const sync = await loadSyncData();
+  let settings = await loadSettings().catch(() => ({ ...SETTINGS_DEFAULTS }));
+  const sync = await loadSyncData().catch(() => null);
   const contentEl = container.querySelector('.content')!;
 
   function render(): void {

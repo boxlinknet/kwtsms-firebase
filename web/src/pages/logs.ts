@@ -105,7 +105,7 @@ export async function renderLogs(container: HTMLElement): Promise<void> {
   const expandedIds = new Set<string>();
 
   async function loadAllLogs(): Promise<void> {
-    allLogs = await loadLogs({ pageSize: 500 });
+    allLogs = await loadLogs({ pageSize: 500 }).catch(() => [] as LogEntry[]);
   }
 
   function getFilters(): { type: string; trigger: string; status: string; from: string; to: string } {
