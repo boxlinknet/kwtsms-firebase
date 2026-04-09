@@ -88,14 +88,14 @@ function renderContent(settings: Settings, sync: SyncData | null): string {
       <div class="card-header"><div><h3>Send Test SMS</h3><p>Send a test message using current settings${settings.test_mode ? ' (test mode ON, no delivery)' : ' (LIVE mode, credits will be consumed)'}</p></div></div>
       <div class="card-body" style="padding:16px 20px;">
         <div class="setting-row">
-          <div class="setting-info"><div class="setting-label">Phone Number</div>
-            <div class="setting-desc">Include country code (e.g. 96598765432)</div></div>
-          <div class="setting-control"><input class="input" type="text" id="test-phone" placeholder="96598765432" /></div>
+          <div class="setting-info"><div class="setting-label">Phone Numbers</div>
+            <div class="setting-desc">Comma-separated, include country code (e.g. 96598765432, 96612345678)</div></div>
+          <div class="setting-control"><input class="input" type="text" id="test-phone" placeholder="96598765432, 96612345678" style="min-width:340px;padding:12px 14px;font-size:15px;" /></div>
         </div>
         <div class="setting-row">
           <div class="setting-info"><div class="setting-label">Message</div>
             <div class="setting-desc">Plain text message to send</div></div>
-          <div class="setting-control"><input class="input" type="text" id="test-message" placeholder="Hello from kwtSMS!" style="min-width:240px;" /></div>
+          <div class="setting-control"><input class="input" type="text" id="test-message" value="kwtSMS test at ${new Date().toISOString().replace('T', ' ').slice(0, 19)}" style="min-width:340px;padding:12px 14px;font-size:15px;" /></div>
         </div>
         <div class="setting-row" style="border-bottom:none;">
           <div class="setting-info">
