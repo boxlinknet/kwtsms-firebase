@@ -30,6 +30,6 @@ export function renderSidebar(activeId: string): string {
         <img src="https://www.kwtsms.com/images/kwtsms_logo_60.png" alt="kwtSMS">
       </div>
       <div class="sidebar-nav">${sections}</div>
-      <div class="sidebar-footer">kwtSMS Firebase Extension <span class="badge">v0.1</span></div>
+      <div class="sidebar-footer">kwtSMS Firebase Extension <span class="badge">v0.2</span></div>
     </nav>`;
 }
