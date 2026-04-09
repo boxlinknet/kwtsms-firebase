@@ -2,7 +2,7 @@
 // Security: Admin-only dashboard. All data from admin-controlled Firestore.
 
 import { renderHeader } from '../components/header';
-import { loadSettings, saveSettings, loadSyncData, loadLogs } from '../firebase';
+import { loadSettings, loadSyncData, loadLogs } from '../firebase';
 import type { Settings, SyncData, LogEntry } from '../types';
 import { SETTINGS_DEFAULTS } from '../types';
 
@@ -75,22 +75,30 @@ function renderRecentActivity(logs: LogEntry[]): string {
     <table><thead><tr><th>Type</th><th>To</th><th>Status</th><th>Time</th></tr></thead><tbody>${rows}</tbody></table></div>`;
 }
 
-function renderQuickSettings(settings: Settings, sync: SyncData | null): string {
+function statusPill(on: boolean, onLabel: string, offLabel: string, variant: 'on' | 'test' = 'on'): string {
+  return on
+    ? `<span class="status ${variant}"><span class="status-dot"></span> ${onLabel}</span>`
+    : `<span class="status skipped"><span class="status-dot"></span> ${offLabel}</span>`;
+}
+
+function renderCurrentSettings(settings: Settings, sync: SyncData | null): string {
   const sender = settings.selected_sender_id;
   const cc = sync?.coverage?.find(c => c.prefix === settings.default_country_code);
   const ccDisplay = cc ? `+${cc.prefix} ${cc.country}` : `+${settings.default_country_code}`;
-  return `<div class="card"><div class="card-header"><h3>Quick Settings</h3><a class="btn btn-ghost btn-sm" href="#/settings">All Settings</a></div>
+  const pill = (val: string) => `<div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:6px 12px;font-size:13px;font-weight:600;min-width:100px;text-align:center;">${val}</div>`;
+
+  return `<div class="card"><div class="card-header"><h3>Current Settings</h3><a class="btn btn-ghost btn-sm" href="#/settings">Edit</a></div>
     <div style="padding:16px 20px;">
-      <div class="setting-row"><div class="setting-info"><div class="setting-label">Gateway Enabled</div><div class="setting-desc">Master on/off for all SMS</div></div>
-        <div class="setting-control"><div class="toggle ${settings.gateway_enabled ? 'on' : ''}" data-key="gateway_enabled"></div></div></div>
-      <div class="setting-row"><div class="setting-info"><div class="setting-label">Test Mode</div><div class="setting-desc">Send with test=1</div></div>
-        <div class="setting-control"><div class="toggle ${settings.test_mode ? 'warn' : ''}" data-key="test_mode"></div></div></div>
-      <div class="setting-row"><div class="setting-info"><div class="setting-label">Debug Logging</div><div class="setting-desc">Verbose output</div></div>
-        <div class="setting-control"><div class="toggle ${settings.debug_logging ? 'on' : ''}" data-key="debug_logging"></div></div></div>
+      <div class="setting-row"><div class="setting-info"><div class="setting-label">Gateway</div></div>
+        <div class="setting-control">${statusPill(settings.gateway_enabled, 'Enabled', 'Disabled')}</div></div>
+      <div class="setting-row"><div class="setting-info"><div class="setting-label">Test Mode</div></div>
+        <div class="setting-control">${statusPill(settings.test_mode, 'Active', 'Off', 'test')}</div></div>
+      <div class="setting-row"><div class="setting-info"><div class="setting-label">Debug Logging</div></div>
+        <div class="setting-control">${statusPill(settings.debug_logging, 'On', 'Off')}</div></div>
       <div class="setting-row"><div class="setting-info"><div class="setting-label">Sender ID</div></div>
-        <div class="setting-control"><div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:6px 12px;font-size:13px;font-weight:600;min-width:120px;text-align:center;">${sender}</div></div></div>
+        <div class="setting-control">${pill(sender)}</div></div>
       <div class="setting-row" style="border-bottom:none;"><div class="setting-info"><div class="setting-label">Country Code</div></div>
-        <div class="setting-control"><div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:6px 12px;font-size:13px;font-weight:600;min-width:120px;text-align:center;">${ccDisplay}</div></div></div>
+        <div class="setting-control">${pill(ccDisplay)}</div></div>
     </div></div>`;
 }
 
@@ -109,18 +117,5 @@ export async function renderDashboard(container: HTMLElement): Promise<void> {
 
   const content = container.querySelector('.content')!;
   content.innerHTML = renderStats(settings, sync) +
-    '<div class="two-col">' + renderRecentActivity(logs) + renderQuickSettings(settings, sync) + '</div>';
-
-  // Bind quick-settings toggles
-  content.querySelectorAll('.toggle[data-key]').forEach(el => {
-    el.addEventListener('click', async () => {
-      const key = el.getAttribute('data-key') as keyof Settings;
-      const s = settings as unknown as Record<string, unknown>;
-      const current = s[key] as boolean;
-      const next = !current;
-      s[key] = next;
-      el.className = next ? `toggle ${key === 'test_mode' ? 'warn' : 'on'}` : 'toggle';
-      await saveSettings(settings).catch(() => {});
-    });
-  });
+    '<div class="two-col">' + renderRecentActivity(logs) + renderCurrentSettings(settings, sync) + '</div>';
 }
