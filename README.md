@@ -31,15 +31,35 @@
 
 Install this extension in your Firebase project to send SMS through kwtSMS. Write a document to Firestore and the extension sends it as SMS automatically. No server setup, no SMS infrastructure to manage.
 
-**Triggers and functions:**
+**Cloud Functions (6 total):**
 
 | Function | Type | What it does |
 |----------|------|-------------|
 | `processQueue` | Firestore trigger | Sends SMS when a document is created in the queue collection |
 | `onUserCreate` | Auth trigger | Sends a welcome SMS when a new user signs up with a phone number |
-| `sendSms` | HTTPS callable | Sends SMS on demand from your client app |
-| `handleOtp` | HTTPS callable | Generates and verifies one-time passwords |
+| `sendSms` | HTTPS callable | Sends SMS on demand from your client app (rate limited: 10/min per user) |
+| `handleOtp` | HTTPS callable | Generates and verifies one-time passwords (60s cooldown, 3 attempts, 5min expiry) |
 | `scheduledSync` | Scheduled | Syncs balance, sender IDs, and coverage from kwtSMS daily |
+| `onInstallHandler` | Lifecycle | Seeds settings, templates, and runs first sync on install |
+
+**Admin Dashboard (Firebase Hosting):**
+
+| Page | What it does |
+|------|-------------|
+| Dashboard | Balance, sent today, test mode/gateway status, recent activity |
+| Settings | Gateway toggles, sender ID, app name, country code, test SMS sender |
+| Templates | View/edit all templates (EN + AR), create custom, delete, revert to defaults |
+| SMS Logs | Filter by type/trigger/status/date, expandable detail rows, pagination, CSV export |
+| Help | Code examples, template variables reference, troubleshooting, error codes |
+
+**Security features:**
+
+- OTP codes hashed (SHA-256) with timing-safe comparison
+- Rate limiting: 10 sends/min per user (callable), 60s OTP cooldown
+- Generic error messages to prevent phone enumeration
+- Firestore rules with admin custom claim for dashboard access
+- Input validation and idempotency guards on all handlers
+- Credentials never logged at any level
 
 **Additional capabilities:**
 
@@ -48,28 +68,32 @@ Install this extension in your Firebase project to send SMS through kwtSMS. Writ
 - Configurable sender ID and default country code from synced API data
 - Global gateway on/off switch and test mode (no delivery, no credits consumed)
 - Firestore audit logs + Cloud Functions debug logging
+- Settings cache with 5s TTL to reduce Firestore reads
+
+## Prerequisites
+
+- [Firebase CLI](https://firebase.google.com/docs/cli) installed (`npm install -g firebase-tools`)
+- A Firebase project with **Firestore** and **Authentication** (email/password) enabled
+- A [kwtSMS account](https://www.kwtsms.com) with API access enabled
+- Node.js >= 20
 
 ## Installation
 
-### Prerequisites
+### Step 1: Install the extension
 
-- [Firebase CLI](https://firebase.google.com/docs/cli) installed (`npm install -g firebase-tools`)
-- A Firebase project with Firestore enabled
-- A [kwtSMS account](https://www.kwtsms.com) with API access enabled
-
-### Install from GitHub
+**From GitHub (recommended):**
 
 ```bash
 firebase ext:install https://github.com/boxlinknet/kwtsms-firebase --project=YOUR_PROJECT
 ```
 
-### Install from Firebase Extensions Hub
+**From Firebase Extensions Hub** (when available):
 
 ```bash
 firebase ext:install kwtsms/kwtsms-firebase --project=YOUR_PROJECT
 ```
 
-### Install from local source
+**From local source:**
 
 ```bash
 git clone https://github.com/boxlinknet/kwtsms-firebase.git
@@ -77,7 +101,42 @@ cd kwtsms-firebase/functions && npm install && npx tsc && cd ..
 firebase ext:install . --project=YOUR_PROJECT
 ```
 
-During installation, you will be prompted for your kwtSMS API username and password. These are stored securely in [Cloud Secret Manager](https://cloud.google.com/secret-manager).
+During installation, you will be prompted for:
+- **kwtSMS API username** (not your phone number, find it in your kwtSMS account settings)
+- **kwtSMS API password**
+- **Application name** (used in welcome/OTP templates)
+- **Cloud Functions location** (choose closest to your users)
+
+Credentials are stored securely in [Cloud Secret Manager](https://cloud.google.com/secret-manager).
+
+### Step 2: Deploy the dashboard (optional)
+
+```bash
+cd kwtsms-firebase/web
+npm install
+npm run build
+cd ..
+firebase deploy --only hosting --project=YOUR_PROJECT
+```
+
+### Step 3: Set up admin access for the dashboard
+
+The dashboard requires Firebase Auth with an admin custom claim. Create an admin user:
+
+```bash
+# Create a user in Firebase Console > Authentication > Users > Add User
+# Then set the admin claim using the Firebase Admin SDK:
+firebase functions:shell
+> const admin = require('firebase-admin');
+> admin.auth().setCustomUserClaims('USER_UID_HERE', { admin: true });
+```
+
+### Step 4: Verify installation
+
+1. Check Firestore: `sms_config/settings` and `sms_config/sync` documents should exist
+2. Check `sms_templates` collection: 8 default templates seeded
+3. Open the dashboard and log in with your admin user
+4. Send a test SMS from Settings page (test mode is ON by default, no real delivery)
 
 ## Configuration
 
@@ -90,8 +149,9 @@ The extension creates a `sms_config/settings` document in Firestore with these d
 | `debug_logging` | `false` | Enables verbose Cloud Functions logs |
 | `default_country_code` | `965` | Prepended to numbers without a country code |
 | `selected_sender_id` | `KWT-SMS` | Active sender ID from your kwtSMS account |
+| `app_name` | `My App` | Used in template placeholders (welcome, OTP messages) |
 
-Test mode is on by default. Set `test_mode` to `false` when you're ready for production.
+Test mode is on by default. Change settings via the dashboard or edit the Firestore document directly. Set `test_mode` to `false` when you're ready for production.
 
 ## Usage
 
@@ -110,12 +170,18 @@ await addDoc(collection(db, 'sms_queue'), {
   message: 'Your order has been confirmed.',
 });
 
-// Send with template
+// Send with template (Arabic)
 await addDoc(collection(db, 'sms_queue'), {
   to: '96598765432',
   template: 'order_confirmed',
   templateData: { customer_name: 'Ahmad', order_id: 'ORD-123' },
   language: 'ar',
+});
+
+// Send to multiple recipients
+await addDoc(collection(db, 'sms_queue'), {
+  to: '96598765432, 96612345678',
+  message: 'Flash sale starts now!',
 });
 ```
 
@@ -125,6 +191,7 @@ The extension picks up the document, sends the SMS, and updates it with the resu
 {
   status: 'sent',        // 'sent', 'failed', or 'skipped'
   response: { ... },     // kwtSMS API response
+  test: true,            // whether test mode was active
   processedAt: Timestamp
 }
 ```
@@ -144,8 +211,10 @@ const result = await sendSms({
   templateData: { customer_name: 'Ahmad', order_id: 'ORD-123' },
   language: 'en',
 });
-// result.data = { success: true, msgId: '...', balanceAfter: 180 }
+// result.data = { success: true, msgId: '...' }
 ```
+
+Requires Firebase Auth. Rate limited to 10 requests per minute per user.
 
 ### OTP verification
 
@@ -154,6 +223,7 @@ const handleOtp = httpsCallable(functions, 'ext-kwtsms-firebase-handleOtp');
 
 // Generate and send OTP
 await handleOtp({ action: 'sendOtp', phone: '96598765432' });
+// { success: true, expiresIn: 300 }
 
 // Verify OTP code
 const result = await handleOtp({
@@ -161,14 +231,17 @@ const result = await handleOtp({
   phone: '96598765432',
   code: '123456',
 });
-// result.data = { success: true }
+// { success: true } or { success: false, error: 'Verification failed' }
 ```
 
-OTP codes expire after 5 minutes. Maximum 3 verification attempts per code.
+- Codes expire after **5 minutes**
+- Maximum **3 verification attempts** per code
+- **60-second cooldown** between sends to the same phone
+- Codes are hashed before storage (SHA-256)
 
 ## Templates
 
-The extension seeds 8 default templates on install. Templates support English and Arabic with `{{placeholder}}` replacement.
+The extension seeds 8 default templates on install. Templates support English and Arabic with `{{placeholder}}` replacement. Edit via the dashboard or directly in the `sms_templates` Firestore collection.
 
 | Template | Placeholders |
 |----------|-------------|
@@ -181,22 +254,23 @@ The extension seeds 8 default templates on install. Templates support English an
 | `reminder` | `customer_name`, `reminder_text` |
 | `custom` | `message` |
 
-Edit template bodies in the `sms_templates` Firestore collection. System templates can't be deleted but their body text can be changed and reverted to the original.
+System templates can't be deleted but their body text can be changed and reverted to the original. Create custom templates via the dashboard.
 
 ## Monitoring
 
-- **SMS logs**: `sms_logs` collection in Firestore
-- **Balance and sync data**: `sms_config/sync` document
-- **Debug logs**: Enable `debug_logging` in settings, then check Cloud Functions logs in Google Cloud Console
+- **Dashboard**: Balance, sent count, gateway status, recent activity at a glance
+- **SMS Logs**: Filter and search all send attempts in the dashboard (or `sms_logs` collection)
+- **Balance**: Synced daily from kwtSMS API (or click "Sync Now" on dashboard)
+- **Debug logs**: Enable `debug_logging` in settings, then check Cloud Functions logs
 
 ## Roadmap
 
 | Phase | Status | Scope |
 |-------|--------|-------|
-| 1. Extension core | v0.1.0 | Queue, Auth, callable, OTP, sync, templates, logging |
-| 2. Dashboard | Planned | Settings UI, templates editor, logs viewer (Firebase Hosting) |
+| 1. Extension core | v1.0.0 | Queue, Auth, callable, OTP, sync, templates, logging, security hardening |
+| 2. Dashboard | v1.0.0 | Settings UI, templates editor, SMS logs viewer, help page (Firebase Hosting) |
 | 3. Campaigns | Planned | Scheduled messages, reminders, bulk campaigns |
-| 4. Security | Planned | CAPTCHA, rate limiting, abuse prevention |
+| 4. Security | Planned | CAPTCHA, advanced rate limiting, abuse prevention |
 
 ## Documentation
 

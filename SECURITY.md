@@ -10,4 +10,5 @@ Do not open a public GitHub issue for security vulnerabilities.
 
 | Version | Supported |
 |---------|-----------|
-| 0.1.x   | Yes       |
+| 1.0.x   | Yes       |
+| 0.1.x   | No        |
