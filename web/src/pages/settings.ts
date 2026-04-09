@@ -83,6 +83,32 @@ function renderContent(settings: Settings, sync: SyncData | null): string {
         <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8"/><path d="M7 3v5h8"/></svg>
         Save Changes
       </button>
+    </div>
+    <div class="card" style="margin-top:20px;">
+      <div class="card-header"><div><h3>Send Test SMS</h3><p>Send a test message using current settings${settings.test_mode ? ' (test mode ON, no delivery)' : ' (LIVE mode, credits will be consumed)'}</p></div></div>
+      <div class="card-body" style="padding:16px 20px;">
+        <div class="setting-row">
+          <div class="setting-info"><div class="setting-label">Phone Number</div>
+            <div class="setting-desc">Include country code (e.g. 96598765432)</div></div>
+          <div class="setting-control"><input class="input" type="text" id="test-phone" placeholder="96598765432" /></div>
+        </div>
+        <div class="setting-row">
+          <div class="setting-info"><div class="setting-label">Message</div>
+            <div class="setting-desc">Plain text message to send</div></div>
+          <div class="setting-control"><input class="input" type="text" id="test-message" placeholder="Hello from kwtSMS!" style="min-width:240px;" /></div>
+        </div>
+        <div class="setting-row" style="border-bottom:none;">
+          <div class="setting-info">
+            <div id="test-result" style="font-size:13px;"></div>
+          </div>
+          <div class="setting-control">
+            <button class="btn btn-primary" id="send-test-btn">
+              <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+              Send SMS
+            </button>
+          </div>
+        </div>
+      </div>
     </div>`;
 }
 
@@ -124,6 +150,39 @@ export async function renderSettings(container: HTMLElement): Promise<void> {
       settings = await loadSettings();
       render();
     });
+    container.querySelector('#send-test-btn')?.addEventListener('click', sendTestSms);
+  }
+
+  async function sendTestSms(): Promise<void> {
+    const phone = (container.querySelector('#test-phone') as HTMLInputElement)?.value.trim();
+    const message = (container.querySelector('#test-message') as HTMLInputElement)?.value.trim();
+    const resultEl = container.querySelector('#test-result') as HTMLElement;
+
+    if (!phone || !message) {
+      resultEl.textContent = '';
+      const span = document.createElement('span');
+      span.style.color = 'var(--danger)';
+      span.textContent = 'Phone number and message are required.';
+      resultEl.appendChild(span);
+      return;
+    }
+
+    resultEl.textContent = 'Sending...';
+    resultEl.style.color = 'var(--text-muted)';
+    const btn = container.querySelector('#send-test-btn') as HTMLButtonElement;
+    btn.disabled = true;
+
+    try {
+      const { addSmsToQueue } = await import('../firebase');
+      await addSmsToQueue(phone, message);
+      resultEl.textContent = 'SMS queued successfully. Check SMS Logs for status.';
+      resultEl.style.color = 'var(--success)';
+    } catch {
+      resultEl.textContent = 'Failed to queue SMS.';
+      resultEl.style.color = 'var(--danger)';
+    } finally {
+      btn.disabled = false;
+    }
   }
 
   async function save(): Promise<void> {

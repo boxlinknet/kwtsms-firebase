@@ -79,6 +79,17 @@ export async function deleteTemplate(name: string): Promise<void> {
   await deleteDoc(doc(db, 'sms_templates', name));
 }
 
+// --- Send SMS (queue) ---
+
+export async function addSmsToQueue(to: string, message: string): Promise<void> {
+  const { addDoc, serverTimestamp } = await import('firebase/firestore');
+  await addDoc(collection(db, 'sms_queue'), {
+    to,
+    message,
+    createdAt: serverTimestamp(),
+  });
+}
+
 // --- Logs ---
 
 export interface LogQuery {
